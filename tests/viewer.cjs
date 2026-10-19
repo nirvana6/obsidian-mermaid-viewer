@@ -63,7 +63,7 @@ const dir = path.resolve(__dirname, '..');
         ?.hasAttribute('viewBox'),
     );
     await page.evaluate(() => {
-      const m = [...viewer.modals][0],
+      const m = [...viewer.modals.values()][0],
         svg = m.viewport.querySelector('svg');
       const initial = svg.outerHTML;
       const labels = [...svg.querySelectorAll('foreignObject')].map((el) => [
@@ -106,7 +106,7 @@ const dir = path.resolve(__dirname, '..');
       m.fit();
     });
     const fit = await page.evaluate(() => {
-      const m = [...viewer.modals][0],
+      const m = [...viewer.modals.values()][0],
         s = m.ui.stage.getBoundingClientRect();
       return {
         scale: m.camera.scale,
@@ -123,18 +123,18 @@ const dir = path.resolve(__dirname, '..');
     });
     assert.equal(fit.styles, fit.originalStyles, 'viewer must not add SVG styles');
     assert(fit.w <= fit.sw && fit.h <= fit.sh && fit.viewport);
-    await page.evaluate(() => [...viewer.modals][0].fitWidth());
+    await page.evaluate(() => [...viewer.modals.values()][0].fitWidth());
     await page.screenshot({ path: path.join(dir, 'previews', fixture + '-paper-fullscreen.png') });
-    await page.evaluate(() => [...viewer.modals][0].fit());
+    await page.evaluate(() => [...viewer.modals.values()][0].fit());
     const light = await page.evaluate(() => {
-      const m = [...viewer.modals][0];
+      const m = [...viewer.modals.values()][0];
       return getComputedStyle(m.ui.canvas.querySelector('g[data-mpv-role] rect')).fill;
     });
     await page.evaluate(() => document.body.classList.add('theme-dark'));
     await new Promise((r) => setTimeout(r, 180));
 
     const dark = await page.evaluate(() => {
-      const m = [...viewer.modals][0];
+      const m = [...viewer.modals.values()][0];
       return getComputedStyle(m.ui.canvas.querySelector('g[data-mpv-role] rect')).fill;
     });
     assert.equal(light, dark, 'diagram palette must stay light when the vault switches theme');
@@ -163,7 +163,10 @@ const dir = path.resolve(__dirname, '..');
     // Toolbar focus must not disable keyboard view controls.
     await page.focus('[aria-label="放大"]');
     await page.keyboard.press('w');
-    assert.equal(await page.evaluate(() => [...viewer.modals][0].camera.viewMode), 'width');
+    assert.equal(
+      await page.evaluate(() => [...viewer.modals.values()][0].camera.viewMode),
+      'width',
+    );
     await page.keyboard.press('f');
     assert.equal(
       await page.$$eval('.mpv-diagram-legend-item', (els) => els.length),
@@ -180,20 +183,21 @@ const dir = path.resolve(__dirname, '..');
     );
     await page.click('[aria-label="放大"]');
     assert(
-      Math.abs((await page.evaluate(() => [...viewer.modals][0].camera.scale)) - fit.scale * 1.25) <
-        1e-8,
+      Math.abs(
+        (await page.evaluate(() => [...viewer.modals.values()][0].camera.scale)) - fit.scale * 1.25,
+      ) < 1e-8,
     );
     await page.evaluate(() =>
       Array.from(document.querySelectorAll('.mpv-diagram-toolbar button'))
         .find((b) => b.textContent === '原始尺寸')
         .click(),
     );
-    assert.equal(await page.evaluate(() => [...viewer.modals][0].camera.scale), 1);
+    assert.equal(await page.evaluate(() => [...viewer.modals.values()][0].camera.scale), 1);
     await page.waitForFunction(() => !document.querySelector('.mpv-diagram-canvas.is-animating'));
     const stage = await page.$('.mpv-diagram-stage');
     const bounds = await stage.boundingBox();
     const old = await page.evaluate(() => {
-      const m = [...viewer.modals][0];
+      const m = [...viewer.modals.values()][0];
       return { x: m.camera.x, y: m.camera.y };
     });
     await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
@@ -201,19 +205,19 @@ const dir = path.resolve(__dirname, '..');
     await page.mouse.move(bounds.x + bounds.width / 2 + 80, bounds.y + bounds.height / 2 + 50);
     await page.mouse.up();
     const pan = await page.evaluate(() => {
-      const m = [...viewer.modals][0];
+      const m = [...viewer.modals.values()][0];
       return { x: m.camera.x, y: m.camera.y };
     });
     assert(Math.abs(pan.x - old.x - 80) < 1 && Math.abs(pan.y - old.y - 50) < 1);
     await page.mouse.wheel({ deltaY: 100 });
-    await page.waitForFunction((y) => [...viewer.modals][0].camera.y < y, {}, pan.y);
+    await page.waitForFunction((y) => [...viewer.modals.values()][0].camera.y < y, {}, pan.y);
     assert.equal(
-      await page.evaluate(() => [...viewer.modals][0].camera.scale),
+      await page.evaluate(() => [...viewer.modals.values()][0].camera.scale),
       1,
       'plain wheel must pan, not zoom',
     );
     await page.evaluate(() => {
-      const m = [...viewer.modals][0],
+      const m = [...viewer.modals.values()][0],
         rect = m.ui.stage.getBoundingClientRect();
       m.ui.stage.dispatchEvent(
         new WheelEvent('wheel', {
@@ -226,7 +230,7 @@ const dir = path.resolve(__dirname, '..');
         }),
       );
     });
-    await page.waitForFunction(() => [...viewer.modals][0].camera.scale > 1);
+    await page.waitForFunction(() => [...viewer.modals.values()][0].camera.scale > 1);
     await page.evaluate(() =>
       Array.from(document.querySelectorAll('.mpv-diagram-toolbar button'))
         .find((b) => b.textContent === '完整显示')
@@ -234,7 +238,7 @@ const dir = path.resolve(__dirname, '..');
     );
     await page.setViewport({ width: 820, height: 640 });
     await page.waitForFunction(() => {
-      const m = [...viewer.modals][0];
+      const m = [...viewer.modals.values()][0];
       return (
         m.camera.bounds.width * m.camera.scale <= m.ui.stage.clientWidth &&
         m.camera.bounds.height * m.camera.scale <= m.ui.stage.clientHeight
@@ -247,7 +251,7 @@ const dir = path.resolve(__dirname, '..');
     });
     const session = await page.createCDPSession();
     const point = (id, x, y) => ({ id, x: touchBounds.x + x, y: touchBounds.y + y });
-    const beforePinch = await page.evaluate(() => [...viewer.modals][0].camera.scale);
+    const beforePinch = await page.evaluate(() => [...viewer.modals.values()][0].camera.scale);
     await session.send('Input.dispatchTouchEvent', {
       type: 'touchStart',
       touchPoints: [point(1, 200, 220), point(2, 300, 220)],
@@ -258,7 +262,7 @@ const dir = path.resolve(__dirname, '..');
     });
     await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     const afterPinch = await page.evaluate(() => {
-      const m = [...viewer.modals][0];
+      const m = [...viewer.modals.values()][0];
       return {
         scale: m.camera.scale,
         pointers: m.input.pointers.size,
@@ -293,8 +297,8 @@ const dir = path.resolve(__dirname, '..');
     await page.keyboard.press('Escape');
     assert.equal(await page.$$eval('.mpv-diagram-modal', (els) => els.length), 0);
     assert.equal(
-      await page.evaluate(() => document.activeElement.className),
-      'mpv-mermaid-open',
+      await page.evaluate(() => document.activeElement.classList.contains('mpv-mermaid-open')),
+      true,
       'restore focus to the opener',
     );
     await page.screenshot({
@@ -320,9 +324,11 @@ const dir = path.resolve(__dirname, '..');
     assert.equal(await page.evaluate(() => viewer.modals.size), 0);
     await page.setViewport({ width: 390, height: 720 });
     await page.click('.mpv-mermaid-open');
-    await page.waitForFunction(() => [...viewer.modals][0]?.viewport.hasAttribute('viewBox'));
+    await page.waitForFunction(() =>
+      [...viewer.modals.values()][0]?.viewport.hasAttribute('viewBox'),
+    );
     const narrow = await page.evaluate(() => {
-      const m = [...viewer.modals][0];
+      const m = [...viewer.modals.values()][0];
       return {
         viewport: innerWidth,
         modal: m.modalEl.getBoundingClientRect().width,
@@ -362,7 +368,7 @@ const dir = path.resolve(__dirname, '..');
       window.requestAnimationFrame = () => 0;
       try {
         document.querySelector('.mpv-mermaid-open').click();
-        const modal = [...viewer.modals][0];
+        const modal = [...viewer.modals.values()][0];
         const box = modal.viewport.getAttribute('viewBox').split(' ').map(Number);
         const width = modal.ui.canvas.getBoundingClientRect().width;
         if (Math.abs(box[2] * modal.camera.scale - width) > 0.01)

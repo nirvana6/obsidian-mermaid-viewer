@@ -33,6 +33,7 @@ The previews use fictional document workflows and contain no personal notes.
 ## Features
 
 - **Fullscreen viewing** — give large diagrams more room than the note column allows.
+- **Pop-out viewing** — show a diagram at full size in a second window and keep the note readable in the main one.
 - **Stable vector zoom** — enlarge details without making labels jump or reflow.
 - **Flexible navigation** — pan with dragging, the wheel or arrow keys; zoom with the wheel modifier, buttons or pinch gestures.
 - **Three view modes** — fit the whole diagram, fit to width, or use the original size.
@@ -66,11 +67,17 @@ flowchart LR
 ```
 ````
 
-Render the note in Reading view or Live Preview, then click **全屏查看** in the diagram header. You can also use the **Mermaid Viewer: 全屏查看当前笔记的 Mermaid 图** command from Obsidian's command palette.
+Render the note in Reading view or Live Preview, then use the actions in the diagram header. Each diagram header carries both actions: **全屏查看** covers the current window, **新窗口打开** shows that diagram at full size in a separate window.
 
 The interface currently uses Chinese labels. The main view buttons are **完整显示** (Fit all), **适合宽度** (Fit width), and **原始尺寸** (Original size).
 
-### 3. Navigate
+### 3. Keep the note in view
+
+Click **新窗口打开** on a diagram to show that diagram at full size in a separate window. The note opens there as well, so the main window keeps the text readable while the diagram is open. In a note with several diagrams, every header action opens the diagram it belongs to.
+
+Every window owns its own controls and viewer: **全屏查看** works inside a pop-out window too, `Esc` closes the viewer of the window it was opened in, and closing a window releases its viewer.
+
+### 4. Navigate
 
 | Action                              | Result                            |
 | ----------------------------------- | --------------------------------- |
@@ -87,7 +94,7 @@ The interface currently uses Chinese labels. The main view buttons are **完整�
 
 Use **适合宽度** for a long diagram, then scroll vertically to read it. Open **操作说明** in the top-right corner for controls and the color legend.
 
-### 4. Choose which notes to include
+### 5. Choose which notes to include
 
 Open **Settings → Mermaid Viewer → 图表应用范围**.
 
@@ -105,7 +112,7 @@ cssclasses:
 
 The scope updates when you leave the setting field. Disabling the plugin removes the controls and styles it added.
 
-### 5. Add semantic colors
+### 6. Add semantic colors
 
 In flowcharts, append `:::className` to a node, as shown in the example above:
 

@@ -1,15 +1,25 @@
-import type { App } from 'obsidian';
+import type { App, TFile, View, WorkspaceLeaf } from 'obsidian';
 import type { DiagramMetadata } from './types';
 
-export function diagramMetadata(app: App, svg: SVGSVGElement): DiagramMetadata {
-  const leaf = app.workspace
+/** The leaf showing this diagram; `getLeavesOfType` covers every window, including pop-outs. */
+function diagramLeaf(app: App, svg: SVGSVGElement): WorkspaceLeaf | undefined {
+  return app.workspace
     .getLeavesOfType('markdown')
     .find((leaf) => leaf.view.containerEl.contains(svg));
-  const view = leaf?.view;
-  const file =
-    view && 'file' in view
-      ? ((view.file as { basename?: string } | null)?.basename ?? 'Mermaid')
-      : 'Mermaid';
+}
+
+function viewFile(view: View): TFile | null {
+  return 'file' in view ? ((view.file as TFile | null) ?? null) : null;
+}
+
+export function diagramFile(app: App, svg: SVGSVGElement): TFile | null {
+  const view = diagramLeaf(app, svg)?.view;
+  return view ? viewFile(view) : null;
+}
+
+export function diagramMetadata(app: App, svg: SVGSVGElement): DiagramMetadata {
+  const leaf = diagramLeaf(app, svg);
+  const file = (leaf ? viewFile(leaf.view) : null)?.basename ?? 'Mermaid';
   const root =
     svg.closest('.markdown-preview-view, .markdown-source-view') ?? leaf?.view.containerEl;
   const headings = Array.from(root?.querySelectorAll('h1,h2,h3,h4,h5,h6,.cm-header') ?? []).filter(

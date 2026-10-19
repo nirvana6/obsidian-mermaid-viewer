@@ -4,6 +4,11 @@
 
 - Keep inline diagrams inside their cards and scale oversized SVGs proportionally in narrow notes, including diagrams with fixed inline dimensions.
 - Preserve fullscreen geometry and restore original SVG sizing when the plugin's scope changes or it unloads.
+## Unreleased
+
+- Add **新窗口打开** to every diagram header, which shows that diagram at full size in a pop-out window while the note stays visible in the main window.
+- Support pop-out windows: each window keeps its own diagram controls and viewer.
+- Remove both command-palette commands; the diagram header actions cover them.
 
 ## 1.5.3
 

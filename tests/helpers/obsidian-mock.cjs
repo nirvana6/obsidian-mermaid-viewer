@@ -30,26 +30,109 @@ module.exports = function installObsidianMock() {
       return this.ownerDocument?.defaultView ?? window;
     },
   });
+  Object.defineProperty(Node.prototype, 'doc', {
+    configurable: true,
+    get() {
+      return this.ownerDocument ?? document;
+    },
+  });
   const setCssStyles = function (styles) {
     Object.assign(this.style, styles);
   };
   HTMLElement.prototype.setCssStyles = SVGElement.prototype.setCssStyles = setCssStyles;
   class MarkdownView {}
+
+  // Windows, leaves and events: enough of the workspace for per-window behaviour.
+  const events = new Map();
+  const leaves = [];
+  /** A leaf in `containerEl`; overrides replace the default detach/openFile behaviour. */
+  function makeLeaf(containerEl, overrides = {}) {
+    return {
+      view: { containerEl, file: { basename: '示例笔记' } },
+      detach: () => containerEl.remove(),
+      async openFile() {},
+      ...overrides,
+    };
+  }
+  const mainLeaf = makeLeaf(document.querySelector('main'), {
+    detach() {
+      const index = leaves.indexOf(mainLeaf);
+      if (index >= 0) leaves.splice(index, 1);
+    },
+  });
+  leaves.push(mainLeaf);
+  window.activeWindow = window;
+  function createMainLeaf() {
+    // A host without pop-out windows reuses the main window for the new leaf.
+    return makeLeaf(document.body.createDiv({ cls: 'workspace-leaf-content' }));
+  }
+  function createPopoutLeaf() {
+    const frame = document.body.createEl('iframe');
+    const win = frame.contentWindow;
+    win.eval(`(${installObsidianMock.toString()})()`);
+    const note = win.document.body.createDiv({ cls: 'markdown-preview-view mermaid-notes' });
+    // A window whose frame left the document is closed, the way the host reports `win.closed`.
+    Object.defineProperty(win, 'closed', {
+      configurable: true,
+      get: () => !document.contains(frame),
+    });
+    // Modal.open follows the active window, so a focused pop-out owns the next modal.
+    Object.defineProperty(win, 'focus', {
+      configurable: true,
+      value: () => {
+        frame.focus();
+        if (!window.suppressFocus) window.activeWindow = win;
+      },
+    });
+    if (!window.suppressFocus) window.activeWindow = win;
+    const leaf = makeLeaf(note, {
+      detach() {
+        const index = leaves.indexOf(leaf);
+        if (index >= 0) leaves.splice(index, 1);
+        frame.remove();
+        if (window.activeWindow === win) window.activeWindow = window;
+        workspace.trigger('window-close', { win, doc: win.document }, win);
+      },
+      async openFile() {
+        // Mermaid renders after the file opens, so the diagram arrives asynchronously.
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        note.createDiv({ cls: 'mermaid' }).innerHTML = window.mermaidFixture ?? '';
+      },
+    });
+    leaves.push(leaf);
+    workspace.trigger('window-open', { win, doc: win.document }, win);
+    return leaf;
+  }
+  const workspace = {
+    containerEl: document.body,
+    onLayoutReady: (fn) => fn(),
+    on(name, callback) {
+      const ref = { name, callback };
+      const entries = events.get(name) ?? [];
+      entries.push(ref);
+      events.set(name, entries);
+      return ref;
+    },
+    off(ref) {
+      const entries = events.get(ref.name) ?? [];
+      const index = entries.indexOf(ref);
+      if (index >= 0) entries.splice(index, 1);
+    },
+    trigger(name, ...args) {
+      for (const ref of [...(events.get(name) ?? [])]) ref.callback(...args);
+    },
+    getActiveViewOfType: () => ({ containerEl: document.querySelector('main') }),
+    getLeavesOfType: () => leaves,
+    iterateAllLeaves: (callback) => [...leaves].forEach(callback),
+    getLeaf(paneType) {
+      if (paneType !== 'window') return mainLeaf;
+      return window.suppressPopout ? createMainLeaf() : createPopoutLeaf();
+    },
+  };
+
   class Plugin {
     constructor() {
-      this.app = {
-        workspace: {
-          containerEl: document.body,
-          onLayoutReady: (fn) => fn(),
-          getActiveViewOfType: () => ({ containerEl: document.querySelector('main') }),
-          getLeavesOfType: () => [
-            {
-              containerEl: document.querySelector('main'),
-              view: { containerEl: document.querySelector('main'), file: { basename: '示例笔记' } },
-            },
-          ],
-        },
-      };
+      this.app = { workspace };
       this.cleanups = [];
     }
     async loadData() {
@@ -68,8 +151,8 @@ module.exports = function installObsidianMock() {
       el.addEventListener(type, fn);
       this.register(() => el.removeEventListener(type, fn));
     }
-    addCommand(command) {
-      this.command = command;
+    registerEvent(ref) {
+      this.register(() => workspace.off(ref));
     }
     unload() {
       this.onunload();
@@ -96,14 +179,16 @@ module.exports = function installObsidianMock() {
         this.close();
         return false;
       });
-      this.containerEl = document.createElement('div');
+    }
+    open() {
+      const doc = (window.activeWindow ?? window).document;
+      this.containerEl = doc.createElement('div');
       this.containerEl.className = 'modal-container';
       this.modalEl = this.containerEl.createDiv({ cls: 'modal' });
       this.titleEl = this.modalEl.createDiv({ cls: 'modal-title' });
       this.contentEl = this.modalEl.createDiv({ cls: 'modal-content' });
-    }
-    open() {
-      document.body.appendChild(this.containerEl);
+      doc.body.appendChild(this.containerEl);
+      this.doc = doc;
       this.onOpen();
       this.escape = (e) => {
         if (this.scope.handleKey(e) === false) {
@@ -111,10 +196,10 @@ module.exports = function installObsidianMock() {
           e.stopImmediatePropagation();
         }
       };
-      document.addEventListener('keydown', this.escape, true);
+      doc.addEventListener('keydown', this.escape, true);
     }
     close() {
-      document.removeEventListener('keydown', this.escape, true);
+      this.doc.removeEventListener('keydown', this.escape, true);
       this.onClose();
       this.containerEl.remove();
     }
@@ -125,6 +210,8 @@ module.exports = function installObsidianMock() {
       minus: 'M5 12h14',
       plus: 'M5 12h14M12 5v14',
       'maximize-2': 'M8 3H3v5M16 21h5v-5M3 3l6 6M21 21l-6-6',
+      'picture-in-picture-2':
+        'M21 9V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4M12 13h9v6h-9z',
       'grid-2x2': 'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
       'circle-help': 'M9 9a3 3 0 1 1 5 2c-2 1-2 2-2 3M12 17h.01',
     };

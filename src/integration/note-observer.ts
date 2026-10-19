@@ -3,6 +3,43 @@ import type { DiagramMetadata } from '../diagram/types';
 import type { ViewerSettings } from '../settings';
 import { clean, decorate } from '../theme/decorate';
 
+/** Inline actions a note can offer for one diagram. */
+interface NoteActions {
+  open(svg: SVGSVGElement): void;
+  openInWindow(svg: SVGSVGElement): void;
+}
+
+/** One card control: the class is the click hook, the handler the matching action. */
+interface NoteAction {
+  cls: string;
+  handler: keyof NoteActions;
+  icon: string;
+  label: string;
+  title: string;
+  description: string;
+}
+
+const ACTIONS: NoteAction[] = [
+  {
+    cls: 'mpv-mermaid-open',
+    handler: 'open',
+    icon: 'maximize-2',
+    label: '全屏查看',
+    title: '全屏查看此图，支持缩放和拖动',
+    description: '全屏查看 Mermaid 图表',
+  },
+  {
+    cls: 'mpv-mermaid-window',
+    handler: 'openInWindow',
+    icon: 'picture-in-picture-2',
+    label: '新窗口打开',
+    title: '在新窗口打开此图，可同时对照笔记正文',
+    description: '在新窗口打开 Mermaid 图表',
+  },
+];
+
+const ACTION_SELECTOR = ACTIONS.map((action) => `.${action.cls}`).join(', ');
+
 /** Owns only injected note controls/styles. No modal or camera logic lives here. */
 export class NoteObserver {
   private readonly owned = new Map<HTMLElement, SVGSVGElement>();
@@ -16,16 +53,17 @@ export class NoteObserver {
     private readonly root: HTMLElement,
     private readonly settings: () => ViewerSettings,
     private readonly metadata: (svg: SVGSVGElement) => DiagramMetadata,
-    open: (svg: SVGSVGElement) => void,
+    private readonly actions: NoteActions,
   ) {
     this.click = (event) => {
       const target = event.target as Element | null;
-      const button = target?.closest('.mpv-mermaid-open');
+      const button = target?.closest<HTMLElement>(ACTION_SELECTOR);
       const svg = button?.closest('.mermaid')?.querySelector<SVGSVGElement>(':scope > svg');
-      if (!svg || !this.eligible(svg)) return;
+      const action = ACTIONS.find((entry) => button?.classList.contains(entry.cls));
+      if (!svg || !action || !this.eligible(svg)) return;
       event.preventDefault();
       event.stopPropagation();
-      open(svg);
+      this.actions[action.handler](svg);
     };
     root.addEventListener('click', this.click);
     this.scan();
@@ -99,16 +137,7 @@ export class NoteObserver {
       if (!bar) {
         bar = container.createDiv({ cls: 'mpv-mermaid-cardbar', prepend: true });
         bar.createSpan({ cls: 'mpv-mermaid-caption' });
-        const button = bar.createEl('button', {
-          cls: 'mpv-mermaid-open',
-          attr: {
-            type: 'button',
-            title: '全屏查看此图，支持缩放和拖动',
-            'aria-label': '全屏查看 Mermaid 图表',
-          },
-        });
-        setIcon(button, 'maximize-2');
-        button.createSpan({ text: '全屏查看' });
+        for (const action of ACTIONS) this.control(bar, action);
       }
       const caption = bar.querySelector<HTMLElement>('.mpv-mermaid-caption');
       const text = `${meta.kind} · ${meta.title}`;
@@ -118,6 +147,15 @@ export class NoteObserver {
       }
     }
     this.syncEmbeds();
+  }
+
+  private control(bar: HTMLElement, action: NoteAction): void {
+    const button = bar.createEl('button', {
+      cls: `mpv-mermaid-action ${action.cls}`,
+      attr: { type: 'button', title: action.title, 'aria-label': action.description },
+    });
+    setIcon(button, action.icon);
+    button.createSpan({ text: action.label });
   }
 
   private syncEmbeds(): void {

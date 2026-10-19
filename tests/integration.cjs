@@ -50,7 +50,7 @@ const root = path.resolve(__dirname, '..');
     );
     await page.evaluate(() => document.querySelector('.embed-actions').remove());
     await page.waitForFunction(() => !document.querySelector('.mpv-mermaid-embed-with-actions'));
-    await page.evaluate(() => viewer.command.callback());
+    await page.click('.mpv-mermaid-open');
     await page.waitForSelector('.mpv-diagram-modal');
     await page.keyboard.press('Escape');
 
@@ -172,7 +172,7 @@ const root = path.resolve(__dirname, '..');
     assert(nestedWindow.caption.includes('Updated in nested window'));
     assert.deepEqual(errors, []);
     console.log(
-      'PASS: Live Preview host cleanup, original SVG styles and concurrent edits, active-view command, searchable settings and legacy validation.',
+      'PASS: Live Preview host cleanup, original SVG styles and concurrent edits, header actions, searchable settings and legacy validation.',
     );
   } finally {
     await browser.close();

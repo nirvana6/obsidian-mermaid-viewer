@@ -22,11 +22,11 @@ export class DiagramModal extends Modal {
     private readonly source: SVGSVGElement,
     private readonly meta: DiagramMetadata,
     private readonly onClosed: () => void,
+    private readonly target: Window = source.win,
   ) {
     super(app);
-    this.returnFocus =
-      source.closest('.mermaid')?.querySelector<HTMLElement>('.mpv-mermaid-open') ??
-      (source.ownerDocument.activeElement as HTMLElement | null);
+    // Focus returns to whatever opened the viewer: the header action the user clicked.
+    this.returnFocus = source.doc.activeElement as HTMLElement | null;
     this.scope = new Scope(this.scope);
     this.scope.register([], 'Escape', () => {
       if (this.ui && !this.ui.help.hidden) {
@@ -39,6 +39,10 @@ export class DiagramModal extends Modal {
   }
 
   onOpen(): void {
+    // Modal.open appends to the active window, which is not necessarily the one showing the
+    // diagram, so adopt the modal before anything derives a window from its element.
+    if (this.containerEl.doc !== this.target.document)
+      this.target.document.body.appendChild(this.containerEl);
     this.modalEl.classList.add('mpv-diagram-modal');
     this.containerEl.classList.add('mpv-diagram-container');
     this.titleEl.textContent = this.meta.title;

@@ -1,13 +1,13 @@
 # Architecture
 
-`src/main.ts` composes the plugin. Obsidian renders Mermaid; the viewer decorates and clones the generated SVG. The only external runtime module is `obsidian`.
+`src/main.ts` composes the plugin and keeps one note observer and one viewer per window, so a pop-out window can show its own diagram. Obsidian renders Mermaid; the viewer decorates and clones the generated SVG. The only external runtime module is `obsidian`.
 
 | Module                             | Responsibility                                                               |
 | ---------------------------------- | ---------------------------------------------------------------------------- |
 | `settings-model.ts`, `settings.ts` | Scope validation, persistence and settings UI                                |
 | `integration/note-observer.ts`     | Eligible diagrams, inline controls and reversible cleanup                    |
 | `diagram/metadata.ts`              | Note and heading metadata through the public View API                        |
-| `viewer/modal.ts`                  | Modal lifecycle and module coordination                                      |
+| `viewer/modal.ts`                  | Modal lifecycle, owning window and module coordination                       |
 | `viewer/camera.ts`                 | Pure zoom, pan and fit geometry                                              |
 | `viewer/input.ts`                  | Mouse, keyboard, wheel, touch and pointer cleanup                            |
 | `viewer/ui.ts`                     | Controls, help and legends                                                   |
@@ -28,6 +28,7 @@
 9. Initial camera layout is synchronous. Paused background animation frames must not leave an uninitialized viewport.
 10. Live Preview overrides apply only to a host containing an owned `.mermaid.mpv-note-diagram` and `.mpv-mermaid-embed` classes. Native source-edit actions keep their original behavior.
 11. Inline cards and SVG viewports fit the note width. Oversized SVGs shrink proportionally without changing the viewBox or label geometry; conflicting inline viewport styles are restored on cleanup. The fullscreen clone is excluded from these responsive rules.
+12. Every window owns its observer and viewer. `window-open` registers a window, `window-close` disposes it, a pop-out that closes while its note loads is never observed, and the viewer adopts itself into the window that shows its diagram when the host reports window focus late.
 
 ## Verification
 
@@ -40,4 +41,4 @@
 - `docs/examples/*.mmd` are the source of both SVG fixtures and documentation screenshots. Regenerate with `npm run build` and `npm run docs:images`.
 - A real Obsidian installation remains necessary for host integration checks.
 
-Flowcharts and sequence diagrams have the broadest coverage. Other diagram types keep their internal styles when their structure is unrecognized. Pop-out windows, embedded Canvas surfaces, the declared minimum app version and mobile devices need dedicated verification before being advertised as supported.
+Flowcharts and sequence diagrams have the broadest coverage. Other diagram types keep their internal styles when their structure is unrecognized. Embedded Canvas surfaces, the declared minimum app version and mobile devices need dedicated verification before being advertised as supported. Pop-out windows are covered by `tests/popout.cjs`, which also models a host that reports window focus late; a real Obsidian installation still verifies that behaviour.

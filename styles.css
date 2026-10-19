@@ -75,7 +75,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.mpv-note-diagram .mpv-mermaid-open {
+.mpv-note-diagram .mpv-mermaid-action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -92,14 +92,14 @@
   box-shadow: none;
   cursor: pointer;
 }
-.mpv-note-diagram .mpv-mermaid-open:hover {
+.mpv-note-diagram .mpv-mermaid-action:hover {
   background: var(--mpv-cache-bg);
 }
-.mpv-note-diagram .mpv-mermaid-open:focus-visible {
+.mpv-note-diagram .mpv-mermaid-action:focus-visible {
   outline: 2px solid var(--mpv-accent);
   outline-offset: 2px;
 }
-.mpv-note-diagram .mpv-mermaid-open > svg.svg-icon {
+.mpv-note-diagram .mpv-mermaid-action > svg.svg-icon {
   width: 14px;
   height: 14px;
   flex: none;
@@ -313,7 +313,7 @@
   background: transparent;
 }
 .mpv-diagram-modal button:focus-visible,
-.mpv-mermaid-open:focus-visible {
+.mpv-mermaid-action:focus-visible {
   outline: 2px solid var(--mpv-accent);
   outline-offset: 2px;
 }
