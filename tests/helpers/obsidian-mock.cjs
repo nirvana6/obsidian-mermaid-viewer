@@ -134,6 +134,7 @@ module.exports = function installObsidianMock() {
     constructor() {
       this.app = { workspace };
       this.cleanups = [];
+      this.commands = [];
     }
     async loadData() {
       return window.savedSettings ?? { noteClass: 'mermaid-notes' };
@@ -153,6 +154,9 @@ module.exports = function installObsidianMock() {
     }
     registerEvent(ref) {
       this.register(() => workspace.off(ref));
+    }
+    addCommand(command) {
+      this.commands.push(command);
     }
     unload() {
       this.onunload();

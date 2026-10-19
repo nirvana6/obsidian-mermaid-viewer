@@ -1,4 +1,4 @@
-import { Notice, Plugin, type WorkspaceLeaf } from 'obsidian';
+import { MarkdownView, Notice, Plugin, type WorkspaceLeaf } from 'obsidian';
 import { diagramFile, diagramMetadata } from './diagram/metadata';
 import { NoteObserver } from './integration/note-observer';
 import {
@@ -40,10 +40,32 @@ export default class MermaidViewer extends Plugin {
     this.registerEvent(
       this.app.workspace.on('window-close', (workspaceWindow) => this.release(workspaceWindow.win)),
     );
+    this.addCommand({
+      id: 'open-current-diagram',
+      name: '全屏查看当前笔记的 Mermaid 图',
+      callback: () => {
+        const scope = this.app.workspace.getActiveViewOfType(MarkdownView)?.containerEl;
+        const diagrams = Array.from(
+          scope?.querySelectorAll<SVGSVGElement>('.mermaid > svg') ?? [],
+        ).filter((svg) => this.eligible(svg));
+        const svg =
+          diagrams.find((el) => {
+            const rect = el.getBoundingClientRect();
+            return rect.bottom > 0 && rect.top < (el.ownerDocument.defaultView?.innerHeight ?? 0);
+          }) ?? diagrams[0];
+        if (svg) this.open(svg);
+        else new Notice('当前笔记没有可查看的 Mermaid 图表，请检查插件设置中的应用范围。');
+      },
+    });
   }
 
   metadata(svg: SVGSVGElement) {
     return diagramMetadata(this.app, svg);
+  }
+
+  /** Scope is per window: a pop-out may show a different note than the main window. */
+  private eligible(svg: SVGSVGElement): boolean {
+    return !!this.observers.get(svg.win)?.eligible(svg);
   }
 
   /** The pop-out created by the current command, if the host opened one. */

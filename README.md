@@ -67,7 +67,9 @@ flowchart LR
 ```
 ````
 
-Render the note in Reading view or Live Preview, then use the actions in the diagram header. Each diagram header carries both actions: **全屏查看** covers the current window, **新窗口打开** shows that diagram at full size in a separate window.
+Render the note in Reading view or Live Preview, then click **全屏查看** in the diagram header. You can also use the **Mermaid Viewer: 全屏查看当前笔记的 Mermaid 图** command from Obsidian's command palette.
+
+Each diagram header carries both actions: **全屏查看** covers the current window, **新窗口打开** shows that diagram at full size in a separate window.
 
 The interface currently uses Chinese labels. The main view buttons are **完整显示** (Fit all), **适合宽度** (Fit width), and **原始尺寸** (Original size).
 

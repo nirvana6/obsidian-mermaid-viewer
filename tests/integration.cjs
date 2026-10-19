@@ -53,6 +53,12 @@ const root = path.resolve(__dirname, '..');
     await page.click('.mpv-mermaid-open');
     await page.waitForSelector('.mpv-diagram-modal');
     await page.keyboard.press('Escape');
+    // The palette command keeps opening the diagram the active note is showing.
+    await page.evaluate(() =>
+      viewer.commands.find((command) => command.id === 'open-current-diagram').callback(),
+    );
+    await page.waitForSelector('.mpv-diagram-modal');
+    await page.keyboard.press('Escape');
 
     // Definitions are searchable on current Obsidian, while the legacy view retains validation.
     assert.deepEqual(
@@ -172,7 +178,7 @@ const root = path.resolve(__dirname, '..');
     assert(nestedWindow.caption.includes('Updated in nested window'));
     assert.deepEqual(errors, []);
     console.log(
-      'PASS: Live Preview host cleanup, original SVG styles and concurrent edits, header actions, searchable settings and legacy validation.',
+      'PASS: Live Preview host cleanup, original SVG styles and concurrent edits, header actions and palette command, searchable settings and legacy validation.',
     );
   } finally {
     await browser.close();
