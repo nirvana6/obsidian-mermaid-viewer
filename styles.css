@@ -237,6 +237,12 @@
   padding: 12px 24px;
   border-bottom: 1px solid var(--mpv-border);
   flex: none;
+  /* The viewer fills the whole window, which hides the strip Obsidian uses as its window
+     drag region, so the header itself becomes the drag handle. Controls stay clickable. */
+  -webkit-app-region: drag;
+}
+.mpv-diagram-header button {
+  -webkit-app-region: no-drag;
 }
 .mpv-diagram-identity {
   display: flex;
