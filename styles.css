@@ -41,6 +41,10 @@
 }
 /* The diagram surface stays light even inside an Obsidian dark vault. */
 .mermaid.mpv-note-diagram {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   color-scheme: light;
   color: var(--mpv-text);
   padding: 16px 20px 20px;

@@ -27,12 +27,13 @@
 8. Node colors depend on semantic classes, not labels or application-specific names.
 9. Initial camera layout is synchronous. Paused background animation frames must not leave an uninitialized viewport.
 10. Live Preview overrides apply only to a host containing an owned `.mermaid.mpv-note-diagram` and `.mpv-mermaid-embed` classes. Native source-edit actions keep their original behavior.
+11. Inline cards and SVG viewports fit the note width. Oversized SVGs shrink proportionally without changing the viewBox or label geometry; conflicting inline viewport styles are restored on cleanup. The fullscreen clone is excluded from these responsive rules.
 
 ## Verification
 
 - Unit tests exercise camera geometry, scope normalization and semantic roles.
 - Browser tests exercise the built bundle with the API mock in `tests/helpers/`.
-- Theme tests check contrast, actor bounds and host-theme invariance. Integration checks cover exact style restoration, concurrent DOM edits, scoped hover styling and searchable settings.
+- Theme tests check contrast, actor bounds and host-theme invariance. Integration checks cover exact style restoration, concurrent DOM edits, scoped hover styling and searchable settings. Inline layout tests cover fixed and inline SVG dimensions, narrow notes, aspect ratios, fullscreen isolation and cleanup without host-provided sizing styles.
 - Source and CSS lint reject direct style assignments, deprecated active-leaf access, global animation frames, native DOM creation, forced CSS overrides and broad parent selectors.
 - CSS is bundled from `styles.css` and `src/theme/svg.css` into `dist/styles.css`, which Obsidian loads. Runtime code adds no style elements. Inline palette normalization reads these loaded rules and restores original declarations on cleanup.
 - Release tests reject missing, stale or unsupported assets. The release workflow attests the three install assets and verifies downloaded bytes and provenance before publishing.

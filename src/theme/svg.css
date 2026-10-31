@@ -1,5 +1,14 @@
 /* Mermaid's generated rules use an SVG ID. The reserved ID in :not raises
    specificity above those rules while matching only our decorated diagrams. */
+/* Contain note SVGs without depending on host styles. Theme normalization
+   reversibly removes conflicting inline sizing; fullscreen keeps its fixed viewport. */
+svg.mpv-diagram:not(#mpv-css-priority):not(.mpv-svg-content) {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  height: auto;
+  overflow: hidden;
+}
 svg.mpv-diagram:not(#mpv-css-priority) {
   background: transparent;
 }

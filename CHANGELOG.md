@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Keep inline diagrams inside their cards and scale oversized SVGs proportionally in narrow notes, including diagrams with fixed inline dimensions.
+- Preserve fullscreen geometry and restore original SVG sizing when the plugin's scope changes or it unloads.
+
 ## 1.5.3
 
 - Load all viewer and diagram CSS through the Obsidian-managed stylesheet, without injecting style elements.

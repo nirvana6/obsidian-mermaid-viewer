@@ -1,5 +1,5 @@
-/** Temporarily remove only inline declarations covered by our theme's CSS rules.
- * Mermaid's geometry, transforms and unrelated diagram styles remain untouched.
+/** Temporarily remove only inline declarations covered by our loaded CSS rules.
+ * Mermaid's viewBox, transforms and label geometry remain untouched.
  */
 type StyledElement = SVGElement | HTMLElement;
 interface SavedStyle {
