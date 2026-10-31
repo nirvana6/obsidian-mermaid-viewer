@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.5.4
 
 - Keep inline diagrams inside their cards and scale oversized SVGs proportionally in narrow notes, including diagrams with fixed inline dimensions.
 - Preserve fullscreen geometry and restore original SVG sizing when the plugin's scope changes or it unloads.
