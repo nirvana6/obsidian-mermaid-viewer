@@ -40,6 +40,14 @@ module.exports = function installObsidianMock() {
     Object.assign(this.style, styles);
   };
   HTMLElement.prototype.setCssStyles = SVGElement.prototype.setCssStyles = setCssStyles;
+  HTMLElement.prototype.addClass = function (...classes) {
+    this.classList.add(...classes);
+    return this;
+  };
+  HTMLElement.prototype.removeClass = function (...classes) {
+    this.classList.remove(...classes);
+    return this;
+  };
   class MarkdownView {}
 
   // Windows, leaves and events: enough of the workspace for per-window behaviour.
@@ -47,12 +55,19 @@ module.exports = function installObsidianMock() {
   const leaves = [];
   /** A leaf in `containerEl`; overrides replace the default detach/openFile behaviour. */
   function makeLeaf(containerEl, overrides = {}) {
-    return {
+    const leaf = {
+      containerEl,
       view: { containerEl, file: { basename: '示例笔记' } },
       detach: () => containerEl.remove(),
       async openFile() {},
+      async setViewState(state) {
+        const factory = workspace.viewFactories.get(state.type);
+        if (!factory) throw new Error(`No view registered for ${state.type}`);
+        this.view = factory(this);
+      },
       ...overrides,
     };
+    return leaf;
   }
   const mainLeaf = makeLeaf(document.querySelector('main'), {
     detach() {
@@ -84,6 +99,11 @@ module.exports = function installObsidianMock() {
         if (!window.suppressFocus) window.activeWindow = win;
       },
     });
+    // Script-opened windows are closable; closing drops the window the way the host does.
+    Object.defineProperty(win, 'close', {
+      configurable: true,
+      value: () => leaf.detach(),
+    });
     if (!window.suppressFocus) window.activeWindow = win;
     const leaf = makeLeaf(note, {
       detach() {
@@ -105,6 +125,7 @@ module.exports = function installObsidianMock() {
   }
   const workspace = {
     containerEl: document.body,
+    viewFactories: new Map(),
     onLayoutReady: (fn) => fn(),
     on(name, callback) {
       const ref = { name, callback };
@@ -157,6 +178,9 @@ module.exports = function installObsidianMock() {
     }
     addCommand(command) {
       this.commands.push(command);
+    }
+    registerView(type, factory) {
+      workspace.viewFactories.set(type, factory);
     }
     unload() {
       this.onunload();
@@ -224,8 +248,17 @@ module.exports = function installObsidianMock() {
       (paths[icon] || paths.plus) +
       '"/></svg>';
   };
+  class ItemView {
+    constructor(leaf) {
+      this.leaf = leaf;
+      this.containerEl = leaf.containerEl;
+      this.contentEl = this.containerEl.createDiv({ cls: 'view-content' });
+    }
+  }
+
   window.obsidianMock = {
     Plugin,
+    ItemView,
     MarkdownView,
     Modal,
     Scope,

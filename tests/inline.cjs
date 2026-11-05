@@ -36,6 +36,7 @@ const root = path.resolve(__dirname, '..');
       <aside class="mermaid" id="unowned"></aside>`);
     await page.addStyleTag({ path: path.join(root, 'dist/styles.css') });
     await page.evaluate(require('./helpers/obsidian-mock.cjs'));
+    await page.evaluate(() => (window.suppressPopout = true));
     await page.evaluate(
       async ({ flow, sequence, source }) => {
         for (const id of ['fixed-flow', 'inline-flow', 'small-flow', 'unowned'])
@@ -105,7 +106,7 @@ const root = path.resolve(__dirname, '..');
             failures.push(card.id + ': card exceeds note width');
           if (getComputedStyle(svg).overflow !== 'hidden')
             failures.push(card.id + ': SVG paint can escape its viewport');
-          const button = card.querySelector('.mpv-mermaid-open').getBoundingClientRect();
+          const button = card.querySelector('.mpv-mermaid-window').getBoundingClientRect();
           if (button.left < left - 1 || button.right > right + 1)
             failures.push(card.id + ': fullscreen control exceeds card');
         }
@@ -117,7 +118,7 @@ const root = path.resolve(__dirname, '..');
     }
 
     // Responsive note styles must never constrain the fullscreen's fixed inner SVG.
-    await page.click('#inline-flow .mpv-mermaid-open');
+    await page.click('#inline-flow .mpv-mermaid-window');
     const fullscreen = await page.$eval('.mpv-svg-content', (svg) => ({
       width: svg.getBoundingClientRect().width,
       style: getComputedStyle(svg).maxWidth,
@@ -137,7 +138,7 @@ const root = path.resolve(__dirname, '..');
 
     // Scope changes and unload restore authored dimensions, including inline declarations.
     await page.evaluate(() => viewer.updateSettings({ noteClass: 'different-scope' }));
-    assert.equal(await page.$$eval('.mpv-mermaid-open', (els) => els.length), 0);
+    assert.equal(await page.$$eval('.mpv-mermaid-window', (els) => els.length), 0);
     assert.equal(
       await page.evaluate(() =>
         originals.every(({ svg, style }) => svg.getAttribute('style') === style),
@@ -149,7 +150,7 @@ const root = path.resolve(__dirname, '..');
       await viewer.updateSettings({ noteClass: 'mermaid-notes' });
       await viewer.updateSettings({ noteClass: 'mermaid-notes' });
     });
-    assert.equal(await page.$$eval('.mpv-mermaid-open', (els) => els.length), 4);
+    assert.equal(await page.$$eval('.mpv-mermaid-window', (els) => els.length), 4);
     await page.evaluate(() => viewer.unload());
     assert.equal(
       await page.evaluate(() =>

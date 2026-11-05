@@ -19,6 +19,7 @@ const dir = path.resolve(__dirname, '..');
     );
     await page.addStyleTag({ content: fs.readFileSync(dir + '/dist/styles.css', 'utf8') });
     await page.evaluate(require('./helpers/obsidian-mock.cjs'));
+    await page.evaluate(() => (window.suppressPopout = true));
     await page.evaluate(
       ({ theme, main }) => {
         const themeModule = { exports: {} };
@@ -49,13 +50,13 @@ const dir = path.resolve(__dirname, '..');
       window.viewer = new module.exports.default();
       await viewer.onload();
     });
-    await page.waitForSelector('.mpv-mermaid-open');
+    await page.waitForSelector('.mpv-mermaid-window');
     assert.equal(
-      await page.$$eval('.mpv-mermaid-open', (els) => els.length),
+      await page.$$eval('.mpv-mermaid-window', (els) => els.length),
       1,
       'must only affect scoped notes',
     );
-    await page.click('.mpv-mermaid-open');
+    await page.click('.mpv-mermaid-window');
     await page.waitForFunction(() =>
       document
         .querySelector('.mpv-diagram-canvas')
@@ -297,7 +298,7 @@ const dir = path.resolve(__dirname, '..');
     await page.keyboard.press('Escape');
     assert.equal(await page.$$eval('.mpv-diagram-modal', (els) => els.length), 0);
     assert.equal(
-      await page.evaluate(() => document.activeElement.classList.contains('mpv-mermaid-open')),
+      await page.evaluate(() => document.activeElement.classList.contains('mpv-mermaid-window')),
       true,
       'restore focus to the opener',
     );
@@ -309,21 +310,21 @@ const dir = path.resolve(__dirname, '..');
     await page.waitForFunction(
       () =>
         !document.querySelector('main .mpv-diagram') &&
-        !document.querySelector('.mpv-mermaid-open'),
+        !document.querySelector('.mpv-mermaid-window'),
     );
     await page.evaluate(() => document.querySelector('main').classList.add('mermaid-notes'));
-    await page.waitForSelector('.mpv-mermaid-open');
+    await page.waitForSelector('.mpv-mermaid-window');
     await page.evaluate(() => (document.querySelector('main h2').textContent = '更新后的示例'));
     await page.waitForFunction(() =>
       document.querySelector('.mpv-mermaid-caption').textContent.includes('更新后的示例'),
     );
     for (let i = 0; i < 3; i++) {
-      await page.click('.mpv-mermaid-open');
+      await page.click('.mpv-mermaid-window');
       await page.click('[aria-label="关闭（Esc）"]');
     }
     assert.equal(await page.evaluate(() => viewer.modals.size), 0);
     await page.setViewport({ width: 390, height: 720 });
-    await page.click('.mpv-mermaid-open');
+    await page.click('.mpv-mermaid-window');
     await page.waitForFunction(() =>
       [...viewer.modals.values()][0]?.viewport.hasAttribute('viewBox'),
     );
@@ -367,7 +368,7 @@ const dir = path.resolve(__dirname, '..');
       const raf = window.requestAnimationFrame;
       window.requestAnimationFrame = () => 0;
       try {
-        document.querySelector('.mpv-mermaid-open').click();
+        document.querySelector('.mpv-mermaid-window').click();
         const modal = [...viewer.modals.values()][0];
         const box = modal.viewport.getAttribute('viewBox').split(' ').map(Number);
         const width = modal.ui.canvas.getBoundingClientRect().width;
@@ -380,7 +381,7 @@ const dir = path.resolve(__dirname, '..');
     });
     // Settings apply immediately, persist across reload, and clean the old scope.
     await page.evaluate(() => viewer.updateSettings({ noteClass: '' }));
-    assert.equal(await page.$$eval('.mpv-mermaid-open', (els) => els.length), 2);
+    assert.equal(await page.$$eval('.mpv-mermaid-window', (els) => els.length), 2);
     assert.deepEqual(await page.evaluate(() => savedSettings), {
       noteClass: '',
     });
@@ -391,9 +392,9 @@ const dir = path.resolve(__dirname, '..');
       window.viewer = new module.exports.default();
       await viewer.onload();
     });
-    assert.equal(await page.$$eval('main .mpv-mermaid-open', (els) => els.length), 0);
+    assert.equal(await page.$$eval('main .mpv-mermaid-window', (els) => els.length), 0);
     assert.equal(await page.$$eval('main svg.mpv-diagram', (els) => els.length), 0);
-    assert.equal(await page.$$eval('aside .mpv-mermaid-open', (els) => els.length), 1);
+    assert.equal(await page.$$eval('aside .mpv-mermaid-window', (els) => els.length), 1);
     // Storage failure must preserve the active settings and visible controls.
     await page.evaluate(async () => {
       const save = viewer.saveData;
@@ -404,7 +405,7 @@ const dir = path.resolve(__dirname, '..');
       viewer.saveData = save;
     });
     assert.equal(await page.evaluate(() => viewer.settings.noteClass), 'review-diagrams');
-    assert.equal(await page.$$eval('.mpv-mermaid-open', (els) => els.length), 1);
+    assert.equal(await page.$$eval('.mpv-mermaid-window', (els) => els.length), 1);
     // Other Mermaid types retain their original SVG styling after decoration and cleanup.
     assert(
       await page.evaluate(() => {
@@ -424,7 +425,7 @@ const dir = path.resolve(__dirname, '..');
     await page.evaluate(() => viewer.unload());
     assert.equal(await page.$$eval('svg.mpv-diagram', (els) => els.length), 0);
     assert.equal(await page.$$eval('[data-mpv-role]', (els) => els.length), 0);
-    assert.equal(await page.$$eval('.mpv-mermaid-open', (els) => els.length), 0);
+    assert.equal(await page.$$eval('.mpv-mermaid-window', (els) => els.length), 0);
     assert.deepEqual(errors, []);
     console.log(
       'PASS: fixed light palette, role legend, help, idempotent decoration, clean unload; scope, fit, zoom buttons, 100%, pointer pan, wheel zoom, resize, Escape, repeated close, unload, zero page errors.',

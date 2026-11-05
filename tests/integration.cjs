@@ -18,6 +18,7 @@ const root = path.resolve(__dirname, '..');
       </main>`);
     await page.addStyleTag({ path: path.join(root, 'dist/styles.css') });
     await page.evaluate(require('./helpers/obsidian-mock.cjs'));
+    await page.evaluate(() => (window.suppressPopout = true));
     await page.evaluate(
       ({ source, svg }) => {
         document.querySelector('.mermaid').innerHTML = svg;
@@ -50,7 +51,7 @@ const root = path.resolve(__dirname, '..');
     );
     await page.evaluate(() => document.querySelector('.embed-actions').remove());
     await page.waitForFunction(() => !document.querySelector('.mpv-mermaid-embed-with-actions'));
-    await page.click('.mpv-mermaid-open');
+    await page.click('.mpv-mermaid-window');
     await page.waitForSelector('.mpv-diagram-modal');
     await page.keyboard.press('Escape');
     // The palette command keeps opening the diagram the active note is showing.

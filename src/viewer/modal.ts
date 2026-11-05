@@ -1,20 +1,17 @@
 import { Modal, Scope, type App } from 'obsidian';
 import type { DiagramMetadata } from '../diagram/types';
-import { Camera, MAX_SCALE } from './camera';
-import { ViewerInput } from './input';
-import { createSvgViewport } from './svg-viewport';
-import { createViewerUI, legend, type ViewerUI } from './ui';
+import { MAX_SCALE, type Camera } from './camera';
+import { mountViewer, type MountedViewer } from './mount-viewer';
+import type { ViewerInput } from './input';
+import type { ViewerUI } from './ui';
 
 export class DiagramModal extends Modal {
   camera!: Camera;
   ui!: ViewerUI;
   viewport!: SVGSVGElement;
   input?: ViewerInput;
-  private readonly events = new AbortController();
+  private viewer?: MountedViewer;
   private readonly returnFocus: HTMLElement | null;
-  private resize?: ResizeObserver;
-  private frame = 0;
-  private resizeFrame = 0;
   private closed = false;
 
   constructor(
@@ -46,34 +43,18 @@ export class DiagramModal extends Modal {
     this.modalEl.classList.add('mpv-diagram-modal');
     this.containerEl.classList.add('mpv-diagram-container');
     this.titleEl.textContent = this.meta.title;
-    this.ui = createViewerUI(this.contentEl, this.meta, this, this.events.signal);
-    const scene = createSvgViewport(this.source, this.ui.canvas);
-    this.viewport = scene.viewport;
-    this.camera = new Camera(scene.bounds);
-    // Modal.open has attached the DOM. Frame the SVG before input is enabled;
-    // background windows can postpone requestAnimationFrame indefinitely.
-    this.camera.resize(this.ui.canvas.getBoundingClientRect());
-    this.camera.initialView();
-    this.render();
-    legend(this.ui.help, scene.content);
-    this.input = new ViewerInput(
-      this.ui.stage,
+    const mounted = mountViewer(
       this.contentEl,
-      this.camera,
-      () => this.render(),
-      this,
+      this.source,
+      this.meta,
+      () => this.close(),
+      this.containerEl.win,
     );
-    this.resize = new ResizeObserver(() => {
-      this.containerEl.win.cancelAnimationFrame(this.resizeFrame);
-      this.resizeFrame = this.containerEl.win.requestAnimationFrame(() => {
-        this.camera.resize(this.ui.canvas.getBoundingClientRect());
-        this.render();
-      });
-    });
-    this.resize.observe(this.ui.stage);
-    this.frame = this.containerEl.win.requestAnimationFrame(() => {
-      this.focus();
-    });
+    this.camera = mounted.camera;
+    this.ui = mounted.ui;
+    this.viewport = mounted.viewport;
+    this.input = mounted.input;
+    this.viewer = mounted;
   }
 
   focus(): void {
@@ -110,11 +91,7 @@ export class DiagramModal extends Modal {
   onClose(): void {
     if (this.closed) return;
     this.closed = true;
-    this.containerEl.win.cancelAnimationFrame(this.frame);
-    this.containerEl.win.cancelAnimationFrame(this.resizeFrame);
-    this.resize?.disconnect();
-    this.input?.dispose();
-    this.events.abort();
+    this.viewer?.dispose();
     this.contentEl.empty();
     this.onClosed();
     queueMicrotask(() => {

@@ -67,17 +67,17 @@ flowchart LR
 ```
 ````
 
-Render the note in Reading view or Live Preview, then click **全屏查看** in the diagram header. You can also use the **Mermaid Viewer: 全屏查看当前笔记的 Mermaid 图** command from Obsidian's command palette.
+Render the note in Reading view or Live Preview, then click **弹窗查看** in the diagram header. The **Mermaid Viewer: 全屏查看当前笔记的 Mermaid 图** command is still available from Obsidian's command palette.
 
-Each diagram header carries both actions: **全屏查看** covers the current window, **新窗口打开** shows that diagram at full size in a separate window.
+Each diagram header carries one action: **弹窗查看** shows that diagram at full size in a separate pop-out window; hosts that cannot open windows fall back to the in-place fullscreen viewer.
 
 The interface currently uses Chinese labels. The main view buttons are **完整显示** (Fit all), **适合宽度** (Fit width), and **原始尺寸** (Original size).
 
 ### 3. Keep the note in view
 
-Click **新窗口打开** on a diagram to show that diagram at full size in a separate window. The note opens there as well, so the main window keeps the text readable while the diagram is open. In a note with several diagrams, every header action opens the diagram it belongs to.
+Click **弹窗查看** on a diagram to show that diagram at full size in a separate pop-out window. The window is draggable by its title bar and resizable from its edges, and the note opens there as well, so the main window keeps the text readable while the diagram is open. In a note with several diagrams, every header action opens the diagram it belongs to.
 
-Every window owns its own controls and viewer: **全屏查看** works inside a pop-out window too, `Esc` closes the viewer of the window it was opened in, and closing a window releases its viewer.
+Every window owns its own controls and viewer: `Esc` closes the viewer of the window it was opened in, and closing a window releases its viewer.
 
 ### 4. Navigate
 

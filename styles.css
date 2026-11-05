@@ -167,6 +167,19 @@
 .modal-container.mpv-diagram-container {
   padding: 0;
 }
+/* The standalone pop-up window leaf hosts the same viewer surface; it fills
+   the leaf instead of spanning the whole viewport, so tabs never reappear
+   beneath it. The leaf content itself keeps no padding or scrollbars. */
+.view-content.mpv-diagram-popup {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.mpv-diagram-popup .modal.mpv-diagram-modal {
+  width: 100%;
+  height: 100%;
+}
 .modal.mpv-diagram-modal {
   color-scheme: light;
   --text-normal: #141413;

@@ -42,53 +42,48 @@ const root = path.resolve(__dirname, '..');
         (position) => document.querySelectorAll('.mpv-mermaid-window')[position].click(),
         index,
       );
-    /** Close the pop-out the way the host does; the controls must be gone with its observer. */
-    const closePopout = () =>
+    /** Close the pop-up the way the host does; window-close must release its state. */
+    const closePopup = () =>
       page.evaluate(() => {
-        const frame = document.querySelector('iframe');
-        const win = frame.contentWindow;
-        viewer.app.workspace.trigger('window-close', { win, doc: win.document }, win);
-        const released = !win.document.querySelector('.mpv-mermaid-action');
-        frame.remove();
+        const win = document.querySelector('iframe').contentWindow;
+        win.close();
         window.activeWindow = window;
-        return released;
       });
     await page.waitForFunction(() => document.querySelectorAll('.mpv-mermaid-window').length === 2);
 
-    // Every diagram owns a window action, and the clicked one is the diagram that opens.
+    // Every diagram owns a window action, and the clicked one is the diagram that shows.
     await clickWindowAction(1);
-    await page.waitForFunction(() => viewer.modals.size === 1);
+    await page.waitForFunction(() => viewer.popups.size === 1);
     assert.deepEqual(
       await page.evaluate(() => {
         const popout = document.querySelector('iframe').contentWindow;
-        const modal = [...viewer.modals.values()][0];
+        const view = [...viewer.popups.values()][0];
         return {
-          modalDocument: modal.containerEl.ownerDocument === popout.document,
-          modalInPopout: !!popout.document.querySelector('.mpv-diagram-modal'),
-          modalInMain: !!document.querySelector('.mpv-diagram-modal'),
-          diagram: modal.viewport.querySelector('.mpv-svg-content')?.dataset.diagram,
-          title: modal.titleEl.textContent,
-          controlsInPopout: popout.document.querySelectorAll('.mpv-mermaid-action').length,
+          viewDocument: view.containerEl.ownerDocument === popout.document,
+          viewerInPopup: !!popout.document.querySelector('.modal.mpv-diagram-modal'),
+          viewerInMain: !!document.querySelector('.modal.mpv-diagram-modal'),
+          diagram: view.viewport.querySelector('.mpv-svg-content')?.dataset.diagram,
           headings: [...document.querySelectorAll('main h2')].map((el) => el.textContent),
+          noteInPopup: popout.document.querySelector('main')?.childElementCount ?? 0,
         };
       }),
       {
-        modalDocument: true,
-        modalInPopout: true,
-        modalInMain: false,
+        viewDocument: true,
+        viewerInPopup: true,
+        viewerInMain: false,
         diagram: 'second',
-        title: '第二张图',
-        controlsInPopout: 2,
         headings: ['第一张图', '第二张图'],
+        noteInPopup: 0,
       },
     );
-    // Escape in the pop-out closes its viewer only, then the window release drops its state.
+
+    // Escape in the pop-up closes the whole window; window-close releases its state.
     await page.evaluate(() => {
       const popout = document.querySelector('iframe').contentWindow;
       popout.document.dispatchEvent(new popout.KeyboardEvent('keydown', { key: 'Escape' }));
     });
-    await page.waitForFunction(() => viewer.modals.size === 0);
-    assert.equal(await closePopout(), true);
+    await page.waitForFunction(() => viewer.popups.size === 0);
+    await page.waitForFunction(() => !document.querySelector('iframe'));
     assert.equal(await page.evaluate(() => document.querySelectorAll('main h2').length), 2);
 
     // A host that reports focus late still gets the viewer in the window showing the diagram.
@@ -96,23 +91,23 @@ const root = path.resolve(__dirname, '..');
       window.suppressFocus = true;
     });
     await clickWindowAction(0);
-    await page.waitForFunction(() => viewer.modals.size === 1);
+    await page.waitForFunction(() => viewer.popups.size === 1);
     assert.deepEqual(
       await page.evaluate(() => {
         const popout = document.querySelector('iframe').contentWindow;
-        const modal = [...viewer.modals.values()][0];
+        const view = [...viewer.popups.values()][0];
         return {
-          modalInPopout: !!popout.document.querySelector('.mpv-diagram-modal'),
-          modalInMain: !!document.querySelector('.mpv-diagram-modal'),
-          diagram: modal.viewport.querySelector('.mpv-svg-content')?.dataset.diagram,
+          viewerInPopup: !!popout.document.querySelector('.modal.mpv-diagram-modal'),
+          viewerInMain: !!document.querySelector('.modal.mpv-diagram-modal'),
+          diagram: view.viewport.querySelector('.mpv-svg-content')?.dataset.diagram,
         };
       }),
-      { modalInPopout: true, modalInMain: false, diagram: 'first' },
+      { viewerInPopup: true, viewerInMain: false, diagram: 'first' },
     );
-    await closePopout();
-    await page.waitForFunction(() => viewer.modals.size === 0);
+    await closePopup();
+    await page.waitForFunction(() => viewer.popups.size === 0);
 
-    // A window closed while its note loads must not leave a viewer behind in a dead window.
+    // A window closed while its pop-up loads must not leave a viewer behind in a dead window.
     await page.evaluate(() => {
       document.querySelectorAll('.mpv-mermaid-window')[1].click();
       const frame = document.querySelector('iframe');
@@ -124,11 +119,11 @@ const root = path.resolve(__dirname, '..');
     await page.waitForFunction(() => !document.querySelector('iframe'));
     assert.deepEqual(
       await page.evaluate(() => ({
-        viewers: viewer.modals.size,
-        modalInMain: !!document.querySelector('.mpv-diagram-modal'),
+        popups: viewer.popups.size,
+        viewerInMain: !!document.querySelector('.modal.mpv-diagram-modal'),
         controlsInMain: document.querySelectorAll('.mpv-mermaid-action').length,
       })),
-      { viewers: 0, modalInMain: false, controlsInMain: 4 },
+      { popups: 0, viewerInMain: false, controlsInMain: 2 },
     );
 
     // A host without pop-out windows keeps the in-place viewer and drops the empty leaf.
@@ -150,7 +145,7 @@ const root = path.resolve(__dirname, '..');
     );
     assert.deepEqual(errors, []);
     console.log(
-      'PASS: each diagram opens its own pop-out window, keeps the note visible, follows the focused window, survives a window closed mid-load and falls back without pop-out support.',
+      'PASS: each diagram opens its own diagram-only pop-up window, keeps the note visible, survives Esc on the window and a window closed mid-load and falls back without pop-out support.',
     );
   } finally {
     await browser.close();

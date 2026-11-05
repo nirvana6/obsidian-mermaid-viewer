@@ -1,5 +1,5 @@
 import { MarkdownView, Notice, Plugin, type WorkspaceLeaf } from 'obsidian';
-import { diagramFile, diagramMetadata } from './diagram/metadata';
+import { diagramMetadata } from './diagram/metadata';
 import { NoteObserver } from './integration/note-observer';
 import {
   DEFAULT_SETTINGS,
@@ -9,12 +9,15 @@ import {
 } from './settings';
 import { decorate } from './theme/decorate';
 import { DiagramModal } from './viewer/modal';
+import { DiagramPopupView, POPUP_VIEW_TYPE } from './viewer/popup-view';
 
 /** Composition root: settings, per-window note integration and modal lifetime only. */
 export default class MermaidViewer extends Plugin {
   settings = { ...DEFAULT_SETTINGS };
   /** One viewer per window, so a pop-out can show its own diagram. */
   readonly modals = new Map<Window, DiagramModal>();
+  /** One diagram-only pop-up window per `window-open` leaf. */
+  readonly popups = new Map<Window, DiagramPopupView>();
   private readonly observers = new Map<Window, NoteObserver>();
   /** Set by `window-open`, which fires while `getLeaf('window')` builds the pop-out. */
   private popout: Window | null = null;
@@ -24,6 +27,7 @@ export default class MermaidViewer extends Plugin {
     this.settings = normalizeSettings(await this.loadData());
     if (this.unloaded) return;
     this.addSettingTab(new ViewerSettingsTab(this.app, this));
+    this.registerView(POPUP_VIEW_TYPE, (leaf) => new DiagramPopupView(leaf));
     this.app.workspace.onLayoutReady(() => {
       if (this.unloaded) return;
       this.observe(this.app.workspace.containerEl);
@@ -85,7 +89,6 @@ export default class MermaidViewer extends Plugin {
         () => this.settings,
         (svg) => this.metadata(svg),
         {
-          open: (svg) => this.open(svg),
           openInWindow: (svg) => void this.openInWindow(svg),
         },
       ),
@@ -98,6 +101,8 @@ export default class MermaidViewer extends Plugin {
     this.observers.delete(win);
     this.modals.get(win)?.close();
     this.modals.delete(win);
+    this.popups.get(win)?.disposeBody();
+    this.popups.delete(win);
   }
 
   /** Opens the viewer for one diagram. A pop-out target keeps the note visible in its own window. */
@@ -140,12 +145,26 @@ export default class MermaidViewer extends Plugin {
       this.open(svg);
       return;
     }
-    const file = diagramFile(this.app, svg);
-    if (file) await leaf.openFile(file, { state: { mode: 'preview' } });
+    try {
+      await leaf.setViewState({ type: POPUP_VIEW_TYPE, state: {} });
+    } catch (error) {
+      console.error('Mermaid Viewer could not mount its pop-up view', error);
+      leaf.detach();
+      this.open(svg);
+      return;
+    }
     if (this.unloaded || win.closed) return;
+    const view = leaf.view;
+    // The registered factory produced the pop-up view; anything else reverts in place.
+    if (!(view instanceof DiagramPopupView)) {
+      leaf.detach();
+      this.open(svg);
+      return;
+    }
     win.focus();
+    this.popups.set(win, view);
     // The clicked diagram is cloned, so a note with several diagrams opens the one requested.
-    this.open(svg, win);
+    view.show(svg, this.metadata(svg));
   }
 
   async updateSettings(value: ViewerSettings): Promise<void> {

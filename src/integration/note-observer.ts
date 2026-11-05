@@ -5,7 +5,6 @@ import { clean, decorate } from '../theme/decorate';
 
 /** Inline actions a note can offer for one diagram. */
 interface NoteActions {
-  open(svg: SVGSVGElement): void;
   openInWindow(svg: SVGSVGElement): void;
 }
 
@@ -21,20 +20,12 @@ interface NoteAction {
 
 const ACTIONS: NoteAction[] = [
   {
-    cls: 'mpv-mermaid-open',
-    handler: 'open',
-    icon: 'maximize-2',
-    label: '全屏查看',
-    title: '全屏查看此图，支持缩放和拖动',
-    description: '全屏查看 Mermaid 图表',
-  },
-  {
     cls: 'mpv-mermaid-window',
     handler: 'openInWindow',
     icon: 'picture-in-picture-2',
-    label: '新窗口打开',
-    title: '在新窗口打开此图，可同时对照笔记正文',
-    description: '在新窗口打开 Mermaid 图表',
+    label: '弹窗查看',
+    title: '在独立弹窗打开此图，可拖动、可调整大小，并可同时对照笔记正文',
+    description: '弹窗查看 Mermaid 图表',
   },
 ];
 
