@@ -10,9 +10,9 @@ const manifest = JSON.parse(await read('manifest.json'));
 const pkg = JSON.parse(await read('package.json'));
 const versions = JSON.parse(await read('versions.json'));
 const errors = [];
-const semver = /^\d+\.\d+\.\d+$/;
+const semver = /^\d+\.\d+\.\d+(?:-fork(?:\.\d+)?)?$/;
 if (!semver.test(manifest.version) || !semver.test(manifest.minAppVersion))
-  errors.push('Versions must use x.y.z.');
+  errors.push('Versions must use x.y.z; the published manifest may carry a -fork suffix.');
 if (pkg.version !== manifest.version) errors.push('package.json version differs from manifest.');
 if (versions[manifest.version] !== manifest.minAppVersion)
   errors.push('versions.json is missing the current compatibility entry.');

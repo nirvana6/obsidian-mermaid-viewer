@@ -9,7 +9,7 @@ import { releaseNotes, verifyReleaseAssets, verifyReleaseAssetList } from './rel
 const root = fileURLToPath(new URL('..', import.meta.url));
 const manifest = JSON.parse(await readFile(path.join(root, 'manifest.json'), 'utf8'));
 const tag = process.argv[2];
-if (!/^\d+\.\d+\.\d+$/.test(tag ?? '') || tag !== manifest.version)
+if (!/^\d+\.\d+\.\d+(?:-fork(?:\.\d+)?)?$/.test(tag ?? '') || tag !== manifest.version)
   throw new Error('Release tag must match manifest.version exactly, without a v prefix.');
 const notes = releaseNotes(await readFile(path.join(root, 'CHANGELOG.md'), 'utf8'), tag);
 const title = `Mermaid Viewer ${tag}`;
