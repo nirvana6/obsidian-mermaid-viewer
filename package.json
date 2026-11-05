@@ -1,6 +1,6 @@
 {
   "name": "mermaid-viewer",
-  "version": "1.5.4-fork",
+  "version": "1.5.4-fork.2",
   "private": true,
   "description": "Light-surface Mermaid viewer for Obsidian.",
   "repository": {
